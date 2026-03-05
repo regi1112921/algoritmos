@@ -70,6 +70,9 @@
             <button class="tool-btn" id="btnNode" onclick="setMode('node')">Agregar Nodo</button>
             <button class="tool-btn" id="btnEdge" onclick="setMode('edge')">Conectar</button>
             <button class="tool-btn" id="btnMove" onclick="setMode('move')">Mover</button>
+            
+            <button class="tool-btn help" onclick="showHelp()">Ayuda</button>
+            
             <button class="tool-btn clear" onclick="clearCanvas()">Limpiar</button>
             <button class="tool-btn pdf" onclick="exportPDF()">PDF</button>
             
@@ -124,6 +127,23 @@
         </div>
     </div>
 
+    <div id="helpModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="text-align: center; margin-bottom: 1.5rem; color: #f39c12;">Guía de Uso del Editor</h3>
+            <ul class="help-list">
+                <li><strong>📍 Agregar Nodo:</strong> Haz clic en el botón "Agregar Nodo" y luego en cualquier parte del lienzo en blanco. Te pedirá que le asignes un nombre.</li>
+                <li><strong>🔗 Conectar Nodos:</strong> Selecciona "Conectar", elige el tipo de conexión en el menú de la esquina inferior izquierda, y arrastra desde un nodo de origen hasta el nodo de destino. Luego ingresa el peso.</li>
+                <li><strong>🖐️ Mover Nodos:</strong> Usa la herramienta "Mover" para arrastrar y organizar tus nodos en el lienzo libremente.</li>
+                <li><strong>🗑️ Eliminar Nodo:</strong> Con cualquier herramienta activa, haz <b>doble clic</b> rápido sobre cualquier nodo para borrarlo junto con todas sus conexiones.</li>
+                <li><strong>📊 Ver Matriz:</strong> Haz clic en el botón "Ver Matriz" (arriba a la derecha) para abrir el panel y observar cómo cambian los datos, sumatorias y contadores en tiempo real.</li>
+                <li><strong>💾 Guardar y Cargar:</strong> Usa "Exportar JSON" para guardar tu grafo y poder seguir editándolo después usando "Importar JSON". Usa "PDF" para exportar un reporte final visual.</li>
+            </ul>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-confirm" onclick="closeHelp()">¡Entendido!</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let connectionType = 'directed';
         
@@ -158,9 +178,17 @@
             } else { panel.classList.add('hidden'); }
         }
 
+        // --- FUNCIONES DE AYUDA ---
+        function showHelp() {
+            document.getElementById('helpModal').style.display = 'flex';
+        }
+        function closeHelp() {
+            document.getElementById('helpModal').style.display = 'none';
+        }
+
         function setMode(newMode) {
             mode = newMode;
-            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tool-btn:not(.help)').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn${newMode.charAt(0).toUpperCase() + newMode.slice(1)}`).classList.add('active');
             const modeNames = { 'node': 'Agregar Nodo', 'edge': 'Conectar Nodos', 'move': 'Mover Nodos' };
             const instructions = { 'node': 'Haz clic en cualquier lugar para crear un nodo.', 'edge': 'Selecciona el tipo de conexión y arrastra.', 'move': 'Arrastra los nodos para moverlos.' };
@@ -224,6 +252,8 @@
 
         async function handleMouseDown(e) {
             if (document.getElementById('customModal').style.display === 'flex') return;
+            if (document.getElementById('helpModal').style.display === 'flex') return;
+
             const pos = getMousePos(e);
             if (mode === 'node') { await addNode(pos.x, pos.y); } 
             else if (mode === 'edge') {
@@ -245,6 +275,8 @@
 
         async function handleMouseUp(e) {
             if (document.getElementById('customModal').style.display === 'flex') return;
+            if (document.getElementById('helpModal').style.display === 'flex') return;
+
             const pos = getMousePos(e);
             
             if (mode === 'edge' && selectedNode) {
