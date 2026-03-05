@@ -8,7 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-        <div id="screen1" class="screen active">
+    <div id="screen1" class="screen active">
         <h1 class="main-title">Análisis de Algoritmos</h1>
         <p class="name_creator"> Regina Maldonado - reginamaldonado123@gmail.com </p>
         <button class="btn-primary" onclick="showScreen(2)">Algoritmos</button>
@@ -113,6 +113,17 @@
         </div>
     </div>
 
+    <div id="customModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modalMessage">Mensaje</h3>
+            <input type="text" id="modalInput" class="modal-input" autocomplete="off">
+            <div class="modal-buttons">
+                <button id="modalCancel" class="btn-modal btn-cancel">Cancelar</button>
+                <button id="modalOk" class="btn-modal btn-confirm">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let connectionType = 'directed';
         
@@ -121,95 +132,100 @@
                 screen.classList.remove('active');
             });
             document.getElementById(`screen${screenNumber}`).classList.add('active');
-            
-            if (screenNumber === 3) {
-                initCanvas();
-            }
+            if (screenNumber === 3) initCanvas();
         }
 
-        let canvas, ctx;
-        let nodes = [];
-        let edges = [];
-        let mode = 'node';
-        let selectedNode = null;
-        let isDragging = false;
-        let dragNode = null;
-        let tempEdge = null;
-        let nodeIdCounter = 0;
-        let matrixPanelVisible = false;
+        let canvas, ctx, nodes = [], edges = [], mode = 'node';
+        let selectedNode = null, isDragging = false, dragNode = null, tempEdge = null;
+        let nodeIdCounter = 0, matrixPanelVisible = false;
 
         function initCanvas() {
             canvas = document.getElementById('graphCanvas');
             ctx = canvas.getContext('2d');
-            
             loadFromStorage();
-            
             canvas.addEventListener('mousedown', handleMouseDown);
             canvas.addEventListener('mousemove', handleMouseMove);
             canvas.addEventListener('mouseup', handleMouseUp);
             canvas.addEventListener('dblclick', handleDoubleClick);
-            
-            draw();
-            updateMatrix();
+            draw(); updateMatrix();
         }
 
         function toggleMatrix() {
             const panel = document.getElementById('matrixPanel');
             matrixPanelVisible = !matrixPanelVisible;
-            
             if (matrixPanelVisible) {
-                panel.classList.remove('hidden');
-                updateMatrix();
-            } else {
-                panel.classList.add('hidden');
-            }
+                panel.classList.remove('hidden'); updateMatrix();
+            } else { panel.classList.add('hidden'); }
         }
 
         function setMode(newMode) {
             mode = newMode;
-            
             document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn${newMode.charAt(0).toUpperCase() + newMode.slice(1)}`).classList.add('active');
-            
             const modeNames = { 'node': 'Agregar Nodo', 'edge': 'Conectar Nodos', 'move': 'Mover Nodos' };
-            const instructions = {
-                'node': 'Haz clic en cualquier lugar para crear un nodo.',
-                'edge': 'Selecciona el tipo de conexión y arrastra entre nodos.',
-                'move': 'Arrastra los nodos para moverlos.'
-            };
-            
+            const instructions = { 'node': 'Haz clic en cualquier lugar para crear un nodo.', 'edge': 'Selecciona el tipo de conexión y arrastra.', 'move': 'Arrastra los nodos para moverlos.' };
             document.getElementById('currentMode').textContent = modeNames[newMode];
             document.getElementById('modeInstructions').textContent = instructions[newMode];
-            
-            const connOptions = document.getElementById('connectionOptions');
-            connOptions.style.display = newMode === 'edge' ? 'block' : 'none';
-            
+            document.getElementById('connectionOptions').style.display = newMode === 'edge' ? 'block' : 'none';
             canvas.style.cursor = newMode === 'move' ? 'move' : 'crosshair';
         }
 
         function setConnectionType(type) { connectionType = type; }
 
         function getMousePos(evt) {
-            const rect = canvas.getBoundingClientRect();
-            const container = document.getElementById('canvasContainer');
-            return {
-                x: evt.clientX - rect.left + container.scrollLeft,
-                y: evt.clientY - rect.top + container.scrollTop
-            };
+            const rect = canvas.getBoundingClientRect(), container = document.getElementById('canvasContainer');
+            return { x: evt.clientX - rect.left + container.scrollLeft, y: evt.clientY - rect.top + container.scrollTop };
         }
 
         function getNodeAt(pos) {
             for (let node of nodes) {
-                const dx = pos.x - node.x;
-                const dy = pos.y - node.y;
+                const dx = pos.x - node.x, dy = pos.y - node.y;
                 if (Math.sqrt(dx*dx + dy*dy) < 30) return node;
             }
             return null;
         }
 
-        function handleMouseDown(e) {
+        // --- SISTEMA DE MODAL PERSONALIZADO ---
+        function customPrompt(message, defaultValue = "") {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customModal');
+                const msgEl = document.getElementById('modalMessage');
+                const inputEl = document.getElementById('modalInput');
+                const btnOk = document.getElementById('modalOk');
+                const btnCancel = document.getElementById('modalCancel');
+
+                msgEl.textContent = message;
+                inputEl.value = defaultValue;
+                modal.style.display = 'flex';
+                inputEl.focus();
+                inputEl.select();
+
+                const cleanup = () => {
+                    btnOk.onclick = null; btnCancel.onclick = null; inputEl.onkeydown = null;
+                    modal.style.display = 'none';
+                };
+                const confirmData = () => { cleanup(); resolve(inputEl.value); };
+                const cancelData = () => { cleanup(); resolve(null); };
+
+                btnOk.onclick = confirmData; btnCancel.onclick = cancelData;
+                inputEl.onkeydown = (e) => {
+                    if (e.key === 'Enter') confirmData();
+                    if (e.key === 'Escape') cancelData();
+                };
+            });
+        }
+
+        async function pedirPeso(mensaje) {
+            let peso = await customPrompt(mensaje, "1");
+            if (peso === null || peso.trim() === "") return null;
+            let valorNum = parseFloat(peso);
+            return isNaN(valorNum) ? 1 : valorNum;
+        }
+
+        async function handleMouseDown(e) {
+            if (document.getElementById('customModal').style.display === 'flex') return;
             const pos = getMousePos(e);
-            if (mode === 'node') { addNode(pos.x, pos.y); } 
+            if (mode === 'node') { await addNode(pos.x, pos.y); } 
             else if (mode === 'edge') {
                 const node = getNodeAt(pos);
                 if (node) { selectedNode = node; tempEdge = { from: node, to: pos, type: connectionType }; }
@@ -224,41 +240,32 @@
             const pos = getMousePos(e);
             if (mode === 'edge' && selectedNode && tempEdge) { tempEdge.to = pos; draw(); } 
             else if (mode === 'move' && isDragging && dragNode) { dragNode.x = pos.x; dragNode.y = pos.y; draw(); }
-            
-            if (getNodeAt(pos)) { canvas.style.cursor = mode === 'move' ? 'move' : 'pointer'; } 
-            else { canvas.style.cursor = mode === 'move' ? 'move' : 'crosshair'; }
+            canvas.style.cursor = (getNodeAt(pos) || mode === 'move') ? (mode === 'move' ? 'move' : 'pointer') : 'crosshair';
         }
 
-        function pedirPeso(mensaje) {
-            let peso = prompt(mensaje, "1");
-            if (peso === null || peso.trim() === "") return null;
-            let valorNum = parseFloat(peso);
-            return isNaN(valorNum) ? 1 : valorNum;
-        }
-
-        function handleMouseUp(e) {
+        async function handleMouseUp(e) {
+            if (document.getElementById('customModal').style.display === 'flex') return;
             const pos = getMousePos(e);
             
             if (mode === 'edge' && selectedNode) {
                 const targetNode = getNodeAt(pos);
-                
                 if (connectionType === 'self') {
                     const exists = edges.some(edge => edge.from === selectedNode && edge.to === selectedNode && edge.type === 'self');
                     if (!exists) {
-                        let peso = pedirPeso(`Ingresa el peso para el bucle de ${selectedNode.label}:`);
+                        let peso = await pedirPeso(`Peso para el bucle de ${selectedNode.label}:`);
                         if(peso !== null) { edges.push({ from: selectedNode, to: selectedNode, type: 'self', weight: peso, id: Date.now() }); saveToStorage(); updateMatrix(); }
                     }
                 } else if (targetNode && targetNode !== selectedNode) {
                     if (connectionType === 'directed') {
                         const exists = edges.some(edge => edge.from === selectedNode && edge.to === targetNode && edge.type === 'directed');
                         if (!exists) {
-                            let peso = pedirPeso(`Peso de la conexión: ${selectedNode.label} → ${targetNode.label}:`);
+                            let peso = await pedirPeso(`Peso de conexión: ${selectedNode.label} → ${targetNode.label}:`);
                             if(peso !== null) { edges.push({ from: selectedNode, to: targetNode, type: 'directed', weight: peso, id: Date.now() }); saveToStorage(); updateMatrix(); }
                         }
                     } else if (connectionType === 'undirected') {
                         const existsAny = edges.some(edge => (edge.from === selectedNode && edge.to === targetNode) || (edge.from === targetNode && edge.to === selectedNode));
                         if (!existsAny) {
-                            let peso = pedirPeso(`Peso de la conexión entre ${selectedNode.label} y ${targetNode.label}:`);
+                            let peso = await pedirPeso(`Peso entre ${selectedNode.label} y ${targetNode.label}:`);
                             if(peso !== null) { edges.push({ from: selectedNode, to: targetNode, type: 'undirected', weight: peso, id: Date.now() }); saveToStorage(); updateMatrix(); }
                         }
                     } else if (connectionType === 'bidirectional') {
@@ -266,11 +273,11 @@
                         const exists2 = edges.some(edge => edge.from === targetNode && edge.to === selectedNode && (edge.type === 'bidirectional' || edge.type === 'directed'));
                         let updated = false;
                         if (!exists1) {
-                            let peso1 = pedirPeso(`Peso de ${selectedNode.label} → ${targetNode.label}:`);
+                            let peso1 = await pedirPeso(`Peso de ${selectedNode.label} → ${targetNode.label}:`);
                             if(peso1 !== null) { edges.push({ from: selectedNode, to: targetNode, type: 'bidirectional', weight: peso1, id: Date.now() }); updated = true; }
                         }
                         if (!exists2) {
-                            let peso2 = pedirPeso(`Peso de ${targetNode.label} → ${selectedNode.label}:`);
+                            let peso2 = await pedirPeso(`Peso de ${targetNode.label} → ${selectedNode.label}:`);
                             if(peso2 !== null) { edges.push({ from: targetNode, to: selectedNode, type: 'bidirectional', weight: peso2, id: Date.now() + 1 }); updated = true; }
                         }
                         if(updated) { saveToStorage(); updateMatrix(); }
@@ -293,47 +300,43 @@
             }
         }
 
-        function addNode(x, y) {
+        async function addNode(x, y) {
             nodeIdCounter++;
-            nodes.push({ id: nodeIdCounter, x: x, y: y, label: `N${nodeIdCounter}` });
+            let defaultName = `N${nodeIdCounter}`;
+            let name = await customPrompt(`Nombre para el nodo:`, defaultName);
+            if (name === null) { nodeIdCounter--; return; }
+            if (name.trim() === "") name = defaultName;
+
+            nodes.push({ id: nodeIdCounter, x: x, y: y, label: name });
             saveToStorage(); updateMatrix(); draw();
         }
 
         function drawNode(node, highlight = false) {
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, 30, 0, Math.PI * 2);
-            ctx.fillStyle = highlight ? '#2980b9' : '#3498db';
-            ctx.fill();
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
+            ctx.beginPath(); ctx.arc(node.x, node.y, 30, 0, Math.PI * 2);
+            ctx.fillStyle = highlight ? '#2980b9' : '#3498db'; ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
             ctx.beginPath(); ctx.arc(node.x - 5, node.y - 5, 20, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill();
-            
             ctx.fillStyle = 'white'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(node.label, node.x, node.y);
         }
 
         function drawArrowHead(x, y, angle, color) {
-            const arrowLength = 22; const spread = Math.PI / 5;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
+            const arrowLength = 22, spread = Math.PI / 5;
+            ctx.beginPath(); ctx.moveTo(x, y);
             ctx.lineTo(x - arrowLength * Math.cos(angle - spread), y - arrowLength * Math.sin(angle - spread));
             ctx.lineTo(x - arrowLength * Math.cos(angle), y - arrowLength * Math.sin(angle));
             ctx.lineTo(x - arrowLength * Math.cos(angle + spread), y - arrowLength * Math.sin(angle + spread));
-            ctx.closePath();
-            ctx.fillStyle = color; ctx.fill();
+            ctx.closePath(); ctx.fillStyle = color; ctx.fill();
             ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke();
         }
 
         function drawEdge(edge, isTemp = false) {
-            const nodeRadius = 30;
-            let textX = 0, textY = 0; 
+            const nodeRadius = 30; let textX = 0, textY = 0; 
 
             if (edge.type === 'self' || (!isTemp && edge.from === edge.to)) {
                 const node = edge.from;
-                const loopCenterAngle  = -Math.PI / 4, loopOpeningAngle = 0.5, loopOutwardLength = 100;
+                const loopCenterAngle = -Math.PI / 4, loopOpeningAngle = 0.5, loopOutwardLength = 100;
                 const startA = loopCenterAngle - loopOpeningAngle / 2, endA = loopCenterAngle + loopOpeningAngle / 2;
                 const sX = node.x + nodeRadius * Math.cos(startA), sY = node.y + nodeRadius * Math.sin(startA);
                 const eX = node.x + nodeRadius * Math.cos(endA), eY = node.y + nodeRadius * Math.sin(endA);
@@ -344,17 +347,12 @@
                 ctx.strokeStyle = isTemp ? '#999' : '#2c3e50'; ctx.lineWidth = isTemp ? 2 : 3;
                 ctx.setLineDash(isTemp ? [5, 5] : []); ctx.stroke(); ctx.setLineDash([]);
 
-                if (!isTemp) {
-                    drawArrowHead(eX, eY, Math.atan2(eY - cp2Y, eX - cp2X), '#2c3e50');
-                    textX = node.x; textY = node.y - 110; 
-                }
+                if (!isTemp) { drawArrowHead(eX, eY, Math.atan2(eY - cp2Y, eX - cp2X), '#2c3e50'); textX = node.x; textY = node.y - 110; }
             } else {
                 const dx = edge.to.x - edge.from.x, dy = edge.to.y - edge.from.y, angle = Math.atan2(dy, dx);
                 const startX = edge.from.x + Math.cos(angle) * nodeRadius, startY = edge.from.y + Math.sin(angle) * nodeRadius;
-                let endX, endY;
-                
-                if (!isTemp) { endX = edge.to.x - Math.cos(angle) * nodeRadius; endY = edge.to.y - Math.sin(angle) * nodeRadius; } 
-                else { endX = edge.to.x; endY = edge.to.y; }
+                let endX = isTemp ? edge.to.x : edge.to.x - Math.cos(angle) * nodeRadius;
+                let endY = isTemp ? edge.to.y : edge.to.y - Math.sin(angle) * nodeRadius;
 
                 if (edge.type === 'undirected') {
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY);
@@ -365,21 +363,15 @@
                     const OFFSET = 70, perpAngle = angle + Math.PI / 2; 
                     const midX = (startX + endX) / 2, midY = (startY + endY) / 2;
                     const ctrlX = midX + Math.cos(perpAngle) * OFFSET, ctrlY = midY + Math.sin(perpAngle) * OFFSET;
-
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
                     ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 3; ctx.setLineDash([]); ctx.stroke();
                     drawArrowHead(endX, endY, Math.atan2(endY - ctrlY, endX - ctrlX), '#2c3e50');
-                    
                     textX = 0.25 * startX + 0.5 * ctrlX + 0.25 * endX; textY = 0.25 * startY + 0.5 * ctrlY + 0.25 * endY;
                 } else {
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY);
                     ctx.strokeStyle = isTemp ? '#999' : '#2c3e50'; ctx.lineWidth = isTemp ? 2 : 3;
                     ctx.setLineDash(isTemp ? [5, 5] : []); ctx.stroke(); ctx.setLineDash([]);
-
-                    if (!isTemp) {
-                        drawArrowHead(endX, endY, angle, '#2c3e50');
-                        textX = (startX + endX) / 2; textY = (startY + endY) / 2;
-                    }
+                    if (!isTemp) { drawArrowHead(endX, endY, angle, '#2c3e50'); textX = (startX + endX) / 2; textY = (startY + endY) / 2; }
                 }
             }
 
@@ -394,17 +386,17 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             edges.forEach(edge => drawEdge(edge));
-            if (tempEdge) { drawEdge(tempEdge, true); }
+            if (tempEdge) drawEdge(tempEdge, true);
             nodes.forEach(node => drawNode(node));
         }
 
         function clearCanvas() {
             if (confirm('¿Estás seguro de que deseas eliminar todos los nodos y conexiones?')) {
-                nodes = []; edges = []; nodeIdCounter = 0;
-                localStorage.removeItem('graphData'); updateMatrix(); draw();
+                nodes = []; edges = []; nodeIdCounter = 0; localStorage.removeItem('graphData'); updateMatrix(); draw();
             }
         }
 
+        // --- SISTEMA DE MATRIZ CON SUMATORIAS Y CONTADORES ---
         function updateMatrix() {
             const container = document.getElementById('matrixContent');
             if (nodes.length === 0) { container.innerHTML = '<p style="text-align: center; color: #999;">No hay nodos creados</p>'; return; }
@@ -416,13 +408,15 @@
             edges.forEach(edge => {
                 const fromIndex = nodes.indexOf(edge.from), toIndex = nodes.indexOf(edge.to);
                 if (fromIndex === -1 || toIndex === -1) return;
+                let w = parseFloat(edge.weight) || 0;
                 
-                if (edge.type === 'self') { matrix[fromIndex][toIndex] = edge.weight; types[fromIndex][toIndex]  = 'self'; } 
-                else if (edge.type === 'undirected') {
-                    matrix[fromIndex][toIndex] = edge.weight; matrix[toIndex][fromIndex] = edge.weight;
+                if (edge.type === 'self') { 
+                    matrix[fromIndex][toIndex] += w; types[fromIndex][toIndex]  = 'self'; 
+                } else if (edge.type === 'undirected') {
+                    matrix[fromIndex][toIndex] += w; matrix[toIndex][fromIndex] += w;
                     types[fromIndex][toIndex]  = 'undirected'; types[toIndex][fromIndex]  = 'undirected';
                 } else {
-                    matrix[fromIndex][toIndex] = edge.weight; types[fromIndex][toIndex]  = edge.type;
+                    matrix[fromIndex][toIndex] += w; types[fromIndex][toIndex]  = edge.type;
                 }
             });
 
@@ -434,12 +428,15 @@
                 }
             }
 
+            const colSums = Array(n).fill(0), colCounts = Array(n).fill(0);
             let html = '<table class="matrix-table"><thead><tr><th></th>';
             nodes.forEach(node => { html += `<th>${node.label}</th>`; });
-            html += '</tr></thead><tbody>';
-            
+            html += '<th style="background:#e67e22;">Suma Fila</th><th style="background:#d35400;">Cant. Fila</th></tr></thead><tbody>';
+
             for (let i = 0; i < n; i++) {
                 html += `<tr><th>${nodes[i].label}</th>`;
+                let rowSum = 0, rowCount = 0;
+
                 for (let j = 0; j < n; j++) {
                     const value = matrix[i][j], type = types[i][j];
                     let cssClass = '';
@@ -449,67 +446,59 @@
                     else if (value !== 0)              cssClass = 'has-connection';
                     
                     html += `<td class="${cssClass}">${value}</td>`;
+                    rowSum += value; if (value !== 0) rowCount++;
+                    colSums[j] += value; if (value !== 0) colCounts[j]++;
                 }
-                html += '</tr>';
+                
+                html += `<td style="font-weight:bold; background:#fdf2e9; color:#d35400;">${rowSum}</td>`;
+                html += `<td style="font-weight:bold; background:#fae5d3; color:#a04000;">${rowCount}</td></tr>`;
             }
-            html += '</tbody></table>';
+            
+            html += `<tr><th style="background:#e67e22;">Suma Col.</th>`;
+            for(let j = 0; j < n; j++) html += `<td style="font-weight:bold; background:#fdf2e9; color:#d35400;">${colSums[j]}</td>`;
+            html += `<td colspan="2" style="background:#e0e0e0;"></td></tr>`; 
 
+            html += `<tr><th style="background:#d35400;">Cant. Col.</th>`;
+            for(let j = 0; j < n; j++) html += `<td style="font-weight:bold; background:#fae5d3; color:#a04000;">${colCounts[j]}</td>`;
+            html += `<td colspan="2" style="background:#e0e0e0;"></td></tr>`; 
+
+            html += '</tbody></table>';
             const selfLoops = edges.filter(e => e.type === 'self').length, undirected = edges.filter(e => e.type === 'undirected').length;
             html += `<div style="margin-top: 10px; font-size: 0.85rem; color: #666;"><strong>Nodos:</strong> ${n} | <strong>Aristas:</strong> ${edges.length} (A→A: ${selfLoops}, A—B: ${undirected})</div>`;
             container.innerHTML = html;
         }
 
+        // --- EXPORTAR E IMPORTAR ---
         function exportPDF() {
-            if (nodes.length === 0) { alert('No hay ningún grafo para exportar. Crea al menos un nodo.'); return; }
-
+            if (nodes.length === 0) { alert('No hay ningún grafo para exportar.'); return; }
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('l', 'mm', 'a4');
             const pageWidth  = doc.internal.pageSize.getWidth(), pageHeight = doc.internal.pageSize.getHeight();
-            
             doc.setFontSize(20); doc.setTextColor(44, 62, 80); doc.text('Análisis de Algoritmos - Representación de Grafo', pageWidth/2, 15, { align: 'center' });
-            doc.setFontSize(10); doc.setTextColor(100, 100, 100); doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')}`, pageWidth/2, 22, { align: 'center' });
-            
-            const canvasData = canvas.toDataURL('image/png');
-            doc.addImage(canvasData, 'PNG', 15, 30, 120, 120);
+            const canvasData = canvas.toDataURL('image/png'); doc.addImage(canvasData, 'PNG', 15, 30, 120, 120);
             doc.setDrawColor(52, 152, 219); doc.setLineWidth(0.5); doc.rect(15, 30, 120, 120);
-            
             doc.setFontSize(14); doc.setTextColor(50, 50, 50); doc.text('Información del Grafo', 145, 35);
             doc.setFontSize(11); doc.setTextColor(80, 80, 80);
             const selfLoops = edges.filter(e => e.type === 'self').length, undirected = edges.filter(e => e.type === 'undirected').length;
             doc.text(`• Total de nodos: ${nodes.length}`, 145, 45); doc.text(`• Bucles (A→A): ${selfLoops}`, 145, 52);
             doc.text(`• Sin dirección (A—B): ${undirected}`, 145, 59); doc.text(`• Total visual aristas: ${edges.length}`, 145, 66);
+            let yPos = 86; doc.setFontSize(12); doc.setTextColor(44, 62, 80); doc.text('Nodos:', 145, 79); doc.setFontSize(10); doc.setTextColor(80, 80, 80);
+            nodes.forEach(node => { if (yPos > pageHeight - 20) return; const connections = edges.filter(e => e.from === node || e.to === node).length; doc.text(`${node.label}: (${Math.round(node.x)}, ${Math.round(node.y)}) - ${connections} conexiones`, 145, yPos); yPos += 6; });
             
-            doc.setFontSize(12); doc.setTextColor(44, 62, 80); doc.text('Nodos:', 145, 79);
-            doc.setFontSize(10); doc.setTextColor(80, 80, 80);
-            let yPos = 86;
-            nodes.forEach(node => {
-                if (yPos > pageHeight - 20) return;
-                const connections = edges.filter(e => e.from === node || e.to === node).length;
-                doc.text(`${node.label}: (${Math.round(node.x)}, ${Math.round(node.y)}) - ${connections} conexiones`, 145, yPos);
-                yPos += 6;
-            });
-            
-            doc.addPage();
-            doc.setFontSize(16); doc.setTextColor(44, 62, 80); doc.text('Matriz de Adyacencia', pageWidth/2, 15, { align: 'center' });
-            
-            const n = nodes.length;
-            const matrix = Array(n).fill(null).map(() => Array(n).fill(0)), types = Array(n).fill(null).map(() => Array(n).fill(null));
+            doc.addPage(); doc.setFontSize(16); doc.setTextColor(44, 62, 80); doc.text('Matriz de Adyacencia (Datos Base)', pageWidth/2, 15, { align: 'center' });
+            const n = nodes.length; const matrix = Array(n).fill(null).map(() => Array(n).fill(0)), types = Array(n).fill(null).map(() => Array(n).fill(null));
             edges.forEach(edge => {
-                const fi = nodes.indexOf(edge.from), ti = nodes.indexOf(edge.to);
-                if (fi === -1 || ti === -1) return;
-                if (edge.type === 'self') { matrix[fi][ti] = edge.weight; types[fi][ti] = 'self'; }
-                else if (edge.type === 'undirected') { matrix[fi][ti] = edge.weight; matrix[ti][fi] = edge.weight; types[fi][ti] = 'undirected'; types[ti][fi] = 'undirected'; }
-                else { matrix[fi][ti] = edge.weight; types[fi][ti] = edge.type; }
+                const fi = nodes.indexOf(edge.from), ti = nodes.indexOf(edge.to); if (fi === -1 || ti === -1) return;
+                let w = parseFloat(edge.weight) || 0;
+                if (edge.type === 'self') { matrix[fi][ti] += w; types[fi][ti] = 'self'; }
+                else if (edge.type === 'undirected') { matrix[fi][ti] += w; matrix[ti][fi] += w; types[fi][ti] = 'undirected'; types[ti][fi] = 'undirected'; }
+                else { matrix[fi][ti] += w; types[fi][ti] = edge.type; }
             });
             for (let i=0; i<n; i++) for (let j=0; j<n; j++) if (i!==j && matrix[i][j]!==0 && matrix[j][i]!==0 && types[i][j]!=='undirected') { types[i][j]='bidirectional'; types[j][i]='bidirectional'; }
-            
-            const cw = Math.min(15, (pageWidth-40)/(n+1)), ch=8, sx=20, sy=30;
-            doc.setFillColor(52,152,219); doc.setTextColor(255,255,255); doc.setFontSize(9);
-            doc.rect(sx, sy, cw, ch, 'F');
+            const cw = Math.min(15, (pageWidth-40)/(n+1)), ch=8, sx=20, sy=30; doc.setFillColor(52,152,219); doc.setTextColor(255,255,255); doc.setFontSize(9); doc.rect(sx, sy, cw, ch, 'F');
             for (let j=0; j<n; j++) { const x=sx+cw*(j+1); doc.rect(x,sy,cw,ch,'F'); doc.text(nodes[j].label,x+cw/2,sy+ch/2+2,{align:'center'}); }
             for (let i=0; i<n; i++) {
-                const ry = sy+ch*(i+1);
-                doc.setFillColor(52,152,219); doc.setTextColor(255,255,255); doc.rect(sx,ry,cw,ch,'F'); doc.text(nodes[i].label,sx+cw/2,ry+ch/2+2,{align:'center'});
+                const ry = sy+ch*(i+1); doc.setFillColor(52,152,219); doc.setTextColor(255,255,255); doc.rect(sx,ry,cw,ch,'F'); doc.text(nodes[i].label,sx+cw/2,ry+ch/2+2,{align:'center'});
                 for (let j=0; j<n; j++) {
                     const x=sx+cw*(j+1), v=matrix[i][j], t=types[i][j];
                     if      (t==='self')          { doc.setFillColor(255,243,205); doc.setTextColor(133,100,4); }
@@ -524,76 +513,31 @@
             doc.save('analisis-algoritmos-grafo.pdf');
         }
 
-        // --- NUEVAS FUNCIONES PARA JSON ---
-        
         function exportJSON() {
-            if (nodes.length === 0) {
-                alert('No hay ningún grafo para exportar.');
-                return;
-            }
-            const data = {
-                nodes: nodes,
-                edges: edges.map(e => ({
-                    from: e.from.id,
-                    to: e.to.id,
-                    type: e.type,
-                    weight: e.weight,
-                    id: e.id
-                })),
-                counter: nodeIdCounter
-            };
-            
+            if (nodes.length === 0) { alert('No hay ningún grafo para exportar.'); return; }
+            const data = { nodes: nodes, edges: edges.map(e => ({ from: e.from.id, to: e.to.id, type: e.type, weight: e.weight, id: e.id })), counter: nodeIdCounter };
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
             const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "grafo_algoritmos.json");
-            document.body.appendChild(downloadAnchorNode); 
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+            downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", "grafo_algoritmos.json");
+            document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove();
         }
 
         function importJSON(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
+            const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
-                    
-                    if (!data.nodes || !Array.isArray(data.nodes)) {
-                        throw new Error("Formato de JSON inválido");
-                    }
-
-                    nodeIdCounter = data.counter || 0;
-                    nodes = data.nodes || [];
-                    edges = [];
-                    
+                    if (!data.nodes || !Array.isArray(data.nodes)) throw new Error("Formato de JSON inválido");
+                    nodeIdCounter = data.counter || 0; nodes = data.nodes || []; edges = [];
                     if (data.edges) {
                         data.edges.forEach(edgeData => {
-                            const fromNode = nodes.find(n => n.id === edgeData.from);
-                            const toNode   = nodes.find(n => n.id === edgeData.to);
-                            if (fromNode && toNode) {
-                                edges.push({ 
-                                    from: fromNode, 
-                                    to: toNode, 
-                                    type: edgeData.type || 'directed',
-                                    weight: edgeData.weight !== undefined ? edgeData.weight : 1, 
-                                    id: edgeData.id || Date.now()
-                                });
-                            }
+                            const fromNode = nodes.find(n => n.id === edgeData.from), toNode = nodes.find(n => n.id === edgeData.to);
+                            if (fromNode && toNode) { edges.push({ from: fromNode, to: toNode, type: edgeData.type || 'directed', weight: edgeData.weight !== undefined ? edgeData.weight : 1, id: edgeData.id || Date.now() }); }
                         });
                     }
-                    
-                    saveToStorage();
-                    updateMatrix();
-                    draw();
-                    alert("¡Grafo importado correctamente!");
-                } catch (error) {
-                    alert("Error al importar el archivo JSON: " + error.message);
-                }
-                
-                // Limpiar el input para permitir subir el mismo archivo otra vez si se desea
+                    saveToStorage(); updateMatrix(); draw(); alert("¡Grafo importado correctamente!");
+                } catch (error) { alert("Error al importar el archivo JSON: " + error.message); }
                 event.target.value = '';
             };
             reader.readAsText(file);
