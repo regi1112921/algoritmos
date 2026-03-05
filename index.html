@@ -469,8 +469,13 @@
         }
 
         // --- EXPORTAR E IMPORTAR ---
-        function exportPDF() {
+        async function exportPDF() {
             if (nodes.length === 0) { alert('No hay ningún grafo para exportar.'); return; }
+            let fileName = await customPrompt("Nombre del archivo PDF:", "grafo_algoritmos");
+            if (fileName === null) return; 
+            if (fileName.trim() === "") fileName = "grafo_algoritmos";
+            if (!fileName.toLowerCase().endsWith('.pdf')) fileName += '.pdf';
+
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('l', 'mm', 'a4');
             const pageWidth  = doc.internal.pageSize.getWidth(), pageHeight = doc.internal.pageSize.getHeight();
@@ -510,15 +515,20 @@
                 }
             }
             doc.setFontSize(10); doc.setTextColor(80,80,80); doc.text('Verde=Dirigida | Azul=Sin dirección | Amarillo=Bucle | Rojo=Doble dirección', sx, sy+ch*(n+1)+10);
-            doc.save('analisis-algoritmos-grafo.pdf');
+            doc.save(fileName);
         }
 
-        function exportJSON() {
+        async function exportJSON() {
             if (nodes.length === 0) { alert('No hay ningún grafo para exportar.'); return; }
+            let fileName = await customPrompt("Nombre del archivo JSON:", "grafo_algoritmos");
+            if (fileName === null) return; 
+            if (fileName.trim() === "") fileName = "grafo_algoritmos";
+            if (!fileName.toLowerCase().endsWith('.json')) fileName += '.json';
+
             const data = { nodes: nodes, edges: edges.map(e => ({ from: e.from.id, to: e.to.id, type: e.type, weight: e.weight, id: e.id })), counter: nodeIdCounter };
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
             const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", "grafo_algoritmos.json");
+            downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", fileName);
             document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove();
         }
 
