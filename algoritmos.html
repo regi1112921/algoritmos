@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Algoritmos</title>
+    <link rel="stylesheet" href="algoritmos.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+    <div id="screen1" class="screen active">
+        <h1 class="main-title">Análisis de Algoritmos</h1>
+        <p class="name_creator"> Regina Maldonado</p>
+        <button class="btn-primary" onclick="showScreen(2)">Algoritmos</button>
+    </div>
+
+    <div id="screen2" class="screen">
+        <button class="btn_back" onclick="showScreen(1)">← Volver</button>
+        <div class="info-container">
+            <h2>¿Qué son los Algoritmos?</h2>
+            
+            <div class="algorithm-card">
+                <h3>Definición</h3>
+                <p>Un algoritmo es un conjunto finito de instrucciones bien definidas que, siguiendo un orden lógico, permiten resolver un problema específico. Es la base de toda la programación y la informática moderna.</p>
+            </div>
+
+            <div class="algorithm-card">
+                <h3>Características Principales</h3>
+                <p><strong>Finitud:</strong> Debe terminar después de un número finito de pasos.<br>
+                <strong>Definición:</strong> Cada paso debe ser preciso y no ambiguo.<br>
+                <strong>Efectividad:</strong> Debe ser capaz de realizarse exactamente y en tiempo finito.<br>
+                <strong>Entrada/Salida:</strong> Puede tener cero o más entradas y al menos una salida.</p>
+            </div>
+
+            <div class="algorithm-card">
+                <h3>Tipos de Algoritmos</h3>
+                <p><strong>Cualitativos:</strong> Describen pasos usando palabras (recetas, manuales).<br>
+                <strong>Cuantitativos:</strong> Utilizan cálculos numéricos y operaciones matemáticas.<br>
+                <strong>De ordenamiento:</strong> Bubble Sort, Quick Sort, Merge Sort.<br>
+                <strong>De búsqueda:</strong> Búsqueda binaria, Búsqueda lineal.<br>
+                <strong>Greedy:</strong> Algoritmos voraces que toman decisiones óptimas locales.</p>
+            </div>
+
+            <div class="algorithm-card">
+                <h3>Notación Big O</h3>
+                <p>Es una notación matemática que describe el comportamiento límite de una función cuando el argumento tiende hacia un valor particular o infinito. En análisis de algoritmos, se usa para clasificar algoritmos según su tiempo de ejecución o uso de espacio.</p>
+            </div>
+
+            <div class="algorithm-card">
+                <h3>Matriz de Adyacencia</h3>
+                <p>Una matriz de adyacencia es una representación cuadrada de un grafo donde las filas y columnas representan los nodos. Un valor de 1 en la posición (i,j) indica que existe una arista del nodo i al nodo j. Es fundamental para el análisis de complejidad de algoritmos sobre grafos.</p>
+            </div>
+
+            <div class="algorithm-card">
+                <h3>Tipos de Conexiones</h3>
+                <p><strong>Simple Dirigida:</strong> Una arista con flecha de A a B.<br>
+                <strong>Sin dirección:</strong> Una línea recta entre A y B, equivalente a ir y venir.<br>
+                <strong>Bucle:</strong> Una arista de un nodo a sí mismo.<br>
+                <strong>Doble:</strong> Dos flechas separadas curveadas, una A→B y otra B→A en sentidos opuestos.</p>
+            </div>
+        </div>
+        <button class="btn-start" onclick="showScreen(3)">Comenzar</button>
+    </div>
+
+    <div id="screen3" class="screen">
+        <button class="back-btn" onclick="showScreen(2)">← Volver</button>
+        
+        <button class="toggle-matrix" onclick="toggleMatrix()">Ver Matriz</button>
+
+        <div class="toolbar">
+            <button class="tool-btn" id="btnNode" onclick="setMode('node')">Agregar Nodo</button>
+            <button class="tool-btn" id="btnEdge" onclick="setMode('edge')">Conectar</button>
+            <button class="tool-btn" id="btnMove" onclick="setMode('move')">Mover</button>
+            <button class="tool-btn clear" onclick="clearCanvas()">Limpiar</button>
+            <button class="tool-btn pdf" onclick="exportPDF()">Exportar PDF</button>
+        </div>
+
+        <div class="canvas-container" id="canvasContainer">
+            <canvas id="graphCanvas" width="2000" height="2000"></canvas>
+        </div>
+
+        <div class="instructions">
+            <strong>Modo actual: <span id="currentMode">Agregar Nodo</span></strong>
+            <p id="modeInstructions">Haz clic en cualquier lugar para crear un nodo.</p>
+            
+            <div class="connection-types" id="connectionOptions" style="display: none;">
+                <strong>Tipo de conexión:</strong><br>
+                <label>
+                    <input type="radio" name="connType" value="directed" checked onchange="setConnectionType('directed')">
+                    Dirigida simple (A → B)
+                </label><br>
+                <label>
+                    <input type="radio" name="connType" value="undirected" onchange="setConnectionType('undirected')">
+                    Sin dirección (A — B)
+                </label><br>
+                <label>
+                    <input type="radio" name="connType" value="bidirectional" onchange="setConnectionType('bidirectional')">
+                    Doble dirección (A ↔ B)
+                </label><br>
+                <label>
+                    <input type="radio" name="connType" value="self" onchange="setConnectionType('self')">
+                    Bucle (A → A)
+                </label>
+            </div>
+        </div>
+
+        <div id="matrixPanel" class="matrix-panel hidden">
+            <h3>Matriz de Adyacencia</h3>
+            <div id="matrixContent">
+                <p style="text-align: center; color: #999;">No hay nodos creados</p>
+            </div>
+            <div class="matrix-info">
+                <strong>Leyenda:</strong>
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #d5f4e6;"></span>Dirigida
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #cce5ff;"></span>Sin dirección
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #fff3cd;"></span>Bucle
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #f8d7da;"></span>Doble dirección
+                    </div>
+                </div>
+                <br>
+                Doble clic en un nodo para eliminarlo.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let connectionType = 'directed';
+        
+        function showScreen(screenNumber) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(`screen${screenNumber}`).classList.add('active');
+            
+            if (screenNumber === 3) {
+                initCanvas();
+            }
+        }
+
+        let canvas, ctx;
+        let nodes = [];
+        let edges = [];
+        let mode = 'node';
+        let selectedNode = null;
+        let isDragging = false;
+        let dragNode = null;
+        let tempEdge = null;
+        let nodeIdCounter = 0;
+        let matrixPanelVisible = false;
+
+        function initCanvas() {
+            canvas = document.getElementById('graphCanvas');
+            ctx = canvas.getContext('2d');
+            
+            loadFromStorage();
+            
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('dblclick', handleDoubleClick);
+            
+            draw();
+            updateMatrix();
+        }
+
+        function toggleMatrix() {
+            const panel = document.getElementById('matrixPanel');
+            matrixPanelVisible = !matrixPanelVisible;
+            
+            if (matrixPanelVisible) {
+                panel.classList.remove('hidden');
+                updateMatrix();
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+
+        function setMode(newMode) {
+            mode = newMode;
+            
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn${newMode.charAt(0).toUpperCase() + newMode.slice(1)}`).classList.add('active');
+            
+            const modeNames = {
+                'node': 'Agregar Nodo',
+                'edge': 'Conectar Nodos',
+                'move': 'Mover Nodos'
+            };
+            const instructions = {
+                'node': 'Haz clic en cualquier lugar para crear un nodo.',
+                'edge': 'Selecciona el tipo de conexión y arrastra entre nodos.',
+                'move': 'Arrastra los nodos para moverlos.'
+            };
+            
+            document.getElementById('currentMode').textContent = modeNames[newMode];
+            document.getElementById('modeInstructions').textContent = instructions[newMode];
+            
+            const connOptions = document.getElementById('connectionOptions');
+            connOptions.style.display = newMode === 'edge' ? 'block' : 'none';
+            
+            canvas.style.cursor = newMode === 'move' ? 'move' : 'crosshair';
+        }
+
+        function setConnectionType(type) {
+            connectionType = type;
+        }
+
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            const container = document.getElementById('canvasContainer');
+            return {
+                x: evt.clientX - rect.left + container.scrollLeft,
+                y: evt.clientY - rect.top + container.scrollTop
+            };
+        }
+
+        function getNodeAt(pos) {
+            for (let node of nodes) {
+                const dx = pos.x - node.x;
+                const dy = pos.y - node.y;
+                if (Math.sqrt(dx*dx + dy*dy) < 30) {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        function handleMouseDown(e) {
+            const pos = getMousePos(e);
+            
+            if (mode === 'node') {
+                addNode(pos.x, pos.y);
+            } else if (mode === 'edge') {
+                const node = getNodeAt(pos);
+                if (node) {
+                    selectedNode = node;
+                    tempEdge = { from: node, to: pos, type: connectionType };
+                }
+            } else if (mode === 'move') {
+                const node = getNodeAt(pos);
+                if (node) {
+                    isDragging = true;
+                    dragNode = node;
+                }
+            }
+            draw();
+        }
+
+        function handleMouseMove(e) {
+            const pos = getMousePos(e);
+            
+            if (mode === 'edge' && selectedNode && tempEdge) {
+                tempEdge.to = pos;
+                draw();
+            } else if (mode === 'move' && isDragging && dragNode) {
+                dragNode.x = pos.x;
+                dragNode.y = pos.y;
+                draw();
+            }
+            
+            if (getNodeAt(pos)) {
+                canvas.style.cursor = mode === 'move' ? 'move' : 'pointer';
+            } else {
+                canvas.style.cursor = mode === 'move' ? 'move' : 'crosshair';
+            }
+        }
+
+        function handleMouseUp(e) {
+            const pos = getMousePos(e);
+            
+            if (mode === 'edge' && selectedNode) {
+                const targetNode = getNodeAt(pos);
+                
+                if (connectionType === 'self') {
+                    const exists = edges.some(edge => 
+                        edge.from === selectedNode && 
+                        edge.to === selectedNode && 
+                        edge.type === 'self'
+                    );
+                    if (!exists) {
+                        edges.push({ from: selectedNode, to: selectedNode, type: 'self', id: Date.now() });
+                        saveToStorage();
+                        updateMatrix();
+                    }
+
+                } else if (targetNode && targetNode !== selectedNode) {
+                    
+                    if (connectionType === 'directed') {
+                        const exists = edges.some(edge => 
+                            edge.from === selectedNode && 
+                            edge.to === targetNode &&
+                            edge.type === 'directed'
+                        );
+                        if (!exists) {
+                            edges.push({ from: selectedNode, to: targetNode, type: 'directed', id: Date.now() });
+                            saveToStorage();
+                            updateMatrix();
+                        }
+
+                    } else if (connectionType === 'undirected') {
+                        const existsAny = edges.some(edge => 
+                            (edge.from === selectedNode && edge.to === targetNode) ||
+                            (edge.from === targetNode && edge.to === selectedNode)
+                        );
+                        if (!existsAny) {
+                            edges.push({ from: selectedNode, to: targetNode, type: 'undirected', id: Date.now() });
+                            saveToStorage();
+                            updateMatrix();
+                        }
+
+                    } else if (connectionType === 'bidirectional') {
+                        // Dos aristas separadas con type='bidirectional', cada una con su propia curva y flecha
+                        const exists1 = edges.some(edge => 
+                            edge.from === selectedNode && edge.to === targetNode &&
+                            (edge.type === 'bidirectional' || edge.type === 'directed')
+                        );
+                        const exists2 = edges.some(edge => 
+                            edge.from === targetNode && edge.to === selectedNode &&
+                            (edge.type === 'bidirectional' || edge.type === 'directed')
+                        );
+                        if (!exists1) {
+                            edges.push({ from: selectedNode, to: targetNode, type: 'bidirectional', id: Date.now() });
+                        }
+                        if (!exists2) {
+                            edges.push({ from: targetNode, to: selectedNode, type: 'bidirectional', id: Date.now() + 1 });
+                        }
+                        saveToStorage();
+                        updateMatrix();
+                    }
+                }
+
+                selectedNode = null;
+                tempEdge = null;
+
+            } else if (mode === 'move') {
+                isDragging = false;
+                dragNode = null;
+                saveToStorage();
+            }
+            draw();
+        }
+
+        function handleDoubleClick(e) {
+            const pos = getMousePos(e);
+            const node = getNodeAt(pos);
+            if (node) {
+                nodes = nodes.filter(n => n !== node);
+                edges = edges.filter(edge => edge.from !== node && edge.to !== node);
+                saveToStorage();
+                updateMatrix();
+                draw();
+            }
+        }
+
+        function addNode(x, y) {
+            nodeIdCounter++;
+            const node = {
+                id: nodeIdCounter,
+                x: x,
+                y: y,
+                label: `N${nodeIdCounter}`
+            };
+            nodes.push(node);
+            saveToStorage();
+            updateMatrix();
+            draw();
+        }
+
+        function drawNode(node, highlight = false) {
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, 30, 0, Math.PI * 2);
+            ctx.fillStyle = highlight ? '#2980b9' : '#3498db';
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(node.x - 5, node.y - 5, 20, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fill();
+            
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(node.label, node.x, node.y);
+        }
+
+        // Helper: dibuja la cabeza de flecha en (x, y) apuntando en dirección 'angle'
+        function drawArrowHead(x, y, angle, color) {
+            const arrowLength = 22;
+            const spread = Math.PI / 5;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x - arrowLength * Math.cos(angle - spread), y - arrowLength * Math.sin(angle - spread));
+            ctx.lineTo(x - arrowLength * Math.cos(angle), y - arrowLength * Math.sin(angle));
+            ctx.lineTo(x - arrowLength * Math.cos(angle + spread), y - arrowLength * Math.sin(angle + spread));
+            ctx.closePath();
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        function drawEdge(edge, isTemp = false) {
+            const nodeRadius = 30;
+
+            // ── BUCLE (Self-Loop) ────────────────────────────────────────
+            if (edge.type === 'self' || (!isTemp && edge.from === edge.to)) {
+                const node = edge.from;
+                const loopCenterAngle  = -Math.PI / 4;
+                const loopOpeningAngle = 0.5;
+                const loopOutwardLength = 100;
+
+                const startA = loopCenterAngle - loopOpeningAngle / 2;
+                const endA   = loopCenterAngle + loopOpeningAngle / 2;
+
+                const sX = node.x + nodeRadius * Math.cos(startA);
+                const sY = node.y + nodeRadius * Math.sin(startA);
+                const eX = node.x + nodeRadius * Math.cos(endA);
+                const eY = node.y + nodeRadius * Math.sin(endA);
+
+                const cp1X = sX + loopOutwardLength * Math.cos(startA);
+                const cp1Y = sY + loopOutwardLength * Math.sin(startA);
+                const cp2X = eX + loopOutwardLength * Math.cos(endA);
+                const cp2Y = eY + loopOutwardLength * Math.sin(endA);
+
+                ctx.beginPath();
+                ctx.moveTo(sX, sY);
+                ctx.bezierCurveTo(cp1X, cp1Y, cp2X, cp2Y, eX, eY);
+                ctx.strokeStyle = isTemp ? '#999' : '#2c3e50';
+                ctx.lineWidth = isTemp ? 2 : 3;
+                ctx.setLineDash(isTemp ? [5, 5] : []);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                if (!isTemp) {
+                    const arrowAngle = Math.atan2(eY - cp2Y, eX - cp2X);
+                    drawArrowHead(eX, eY, arrowAngle, '#2c3e50');
+                }
+                return;
+            }
+
+            // Cálculos comunes de inicio/fin sobre el borde del nodo
+            const dx = edge.to.x - edge.from.x;
+            const dy = edge.to.y - edge.from.y;
+            const angle = Math.atan2(dy, dx);
+
+            const startX = edge.from.x + Math.cos(angle) * nodeRadius;
+            const startY = edge.from.y + Math.sin(angle) * nodeRadius;
+            let endX, endY;
+            if (!isTemp) {
+                endX = edge.to.x - Math.cos(angle) * nodeRadius;
+                endY = edge.to.y - Math.sin(angle) * nodeRadius;
+            } else {
+                endX = edge.to.x;
+                endY = edge.to.y;
+            }
+
+            // ── SIN DIRECCIÓN: línea recta roja, sin flecha ──────────────
+            if (edge.type === 'undirected') {
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = isTemp ? '#999' : '#e74c3c';
+                ctx.lineWidth = isTemp ? 2 : 3;
+                ctx.setLineDash(isTemp ? [5, 5] : []);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                return;
+            }
+
+            // ── DOBLE DIRECCIÓN: curva cuadrática hacia la izquierda del sentido de viaje ──
+            // Como cada arista (A→B y B→A) tiene su propio offset perpendicular en sentido
+            // contrario, las dos flechas quedan separadas y visibles individualmente.
+            if (edge.type === 'bidirectional' && !isTemp) {
+                const OFFSET = 70; // px de separación lateral
+                const perpAngle = angle + Math.PI / 2; // perpendicular a la izquierda
+                const midX = (startX + endX) / 2;
+                const midY = (startY + endY) / 2;
+                const ctrlX = midX + Math.cos(perpAngle) * OFFSET;
+                const ctrlY = midY + Math.sin(perpAngle) * OFFSET;
+
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
+                ctx.strokeStyle = '#2c3e50';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([]);
+                ctx.stroke();
+
+                // Tangente al final de la curva cuadrática (t=1): dirección end - ctrl
+                const arrowAngle = Math.atan2(endY - ctrlY, endX - ctrlX);
+                drawArrowHead(endX, endY, arrowAngle, '#2c3e50');
+                return;
+            }
+
+            // ── DIRIGIDA SIMPLE (o línea temporal): recta con flecha ─────
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = isTemp ? '#999' : '#2c3e50';
+            ctx.lineWidth = isTemp ? 2 : 3;
+            ctx.setLineDash(isTemp ? [5, 5] : []);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            if (!isTemp) {
+                drawArrowHead(endX, endY, angle, '#2c3e50');
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            edges.forEach(edge => drawEdge(edge));
+            
+            if (tempEdge) {
+                drawEdge(tempEdge, true);
+            }
+            
+            nodes.forEach(node => drawNode(node));
+        }
+
+        function clearCanvas() {
+            if (confirm('¿Estás seguro de que deseas eliminar todos los nodos y conexiones?')) {
+                nodes = [];
+                edges = [];
+                nodeIdCounter = 0;
+                localStorage.removeItem('graphData');
+                updateMatrix();
+                draw();
+            }
+        }
+
+        function updateMatrix() {
+            const container = document.getElementById('matrixContent');
+            
+            if (nodes.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No hay nodos creados</p>';
+                return;
+            }
+
+            const n = nodes.length;
+            const matrix = Array(n).fill(null).map(() => Array(n).fill(0));
+            const types  = Array(n).fill(null).map(() => Array(n).fill(null));
+            
+            edges.forEach(edge => {
+                const fromIndex = nodes.indexOf(edge.from);
+                const toIndex   = nodes.indexOf(edge.to);
+                if (fromIndex === -1 || toIndex === -1) return;
+
+                if (edge.type === 'self') {
+                    matrix[fromIndex][toIndex] = 1;
+                    types[fromIndex][toIndex]  = 'self';
+                } else if (edge.type === 'undirected') {
+                    matrix[fromIndex][toIndex] = 1;
+                    matrix[toIndex][fromIndex] = 1;
+                    types[fromIndex][toIndex]  = 'undirected';
+                    types[toIndex][fromIndex]  = 'undirected';
+                } else {
+                    // directed o bidirectional
+                    matrix[fromIndex][toIndex] = 1;
+                    types[fromIndex][toIndex]  = edge.type;
+                }
+            });
+
+            // Detectar pares bidireccionales para colorear la matriz
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    if (i !== j && matrix[i][j] === 1 && matrix[j][i] === 1 && types[i][j] !== 'undirected') {
+                        types[i][j] = 'bidirectional';
+                        types[j][i] = 'bidirectional';
+                    }
+                }
+            }
+
+            let html = '<table class="matrix-table"><thead><tr><th></th>';
+            nodes.forEach(node => {
+                html += `<th>${node.label}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            for (let i = 0; i < n; i++) {
+                html += `<tr><th>${nodes[i].label}</th>`;
+                for (let j = 0; j < n; j++) {
+                    const value = matrix[i][j];
+                    const type  = types[i][j];
+                    let cssClass = '';
+                    if      (type === 'self')          cssClass = 'has-self-loop';
+                    else if (type === 'undirected')    cssClass = 'has-connection';
+                    else if (type === 'bidirectional') cssClass = 'has-both-ways';
+                    else if (value === 1)              cssClass = 'has-connection';
+                    html += `<td class="${cssClass}">${value}</td>`;
+                }
+                html += '</tr>';
+            }
+            
+            html += '</tbody></table>';
+
+            const selfLoops  = edges.filter(e => e.type === 'self').length;
+            const undirected = edges.filter(e => e.type === 'undirected').length;
+            html += `<div style="margin-top: 10px; font-size: 0.85rem; color: #666;">
+                <strong>Nodos:</strong> ${n} | <strong>Aristas:</strong> ${edges.length} (A→A: ${selfLoops}, A—B: ${undirected})
+            </div>`;
+            
+            container.innerHTML = html;
+        }
+
+        function exportPDF() {
+            if (nodes.length === 0) {
+                alert('No hay ningún grafo para exportar. Crea al menos un nodo.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const pageWidth  = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            
+            doc.setFontSize(20);
+            doc.setTextColor(44, 62, 80);
+            doc.text('Análisis de Algoritmos - Representación de Grafo', pageWidth/2, 15, { align: 'center' });
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')}`, pageWidth/2, 22, { align: 'center' });
+            
+            const canvasData = canvas.toDataURL('image/png');
+            doc.addImage(canvasData, 'PNG', 15, 30, 120, 120);
+            doc.setDrawColor(52, 152, 219);
+            doc.setLineWidth(0.5);
+            doc.rect(15, 30, 120, 120);
+            
+            doc.setFontSize(14); doc.setTextColor(50, 50, 50);
+            doc.text('Información del Grafo', 145, 35);
+            doc.setFontSize(11); doc.setTextColor(80, 80, 80);
+            const selfLoops  = edges.filter(e => e.type === 'self').length;
+            const undirected = edges.filter(e => e.type === 'undirected').length;
+            doc.text(`• Total de nodos: ${nodes.length}`, 145, 45);
+            doc.text(`• Bucles (A→A): ${selfLoops}`, 145, 52);
+            doc.text(`• Sin dirección (A—B): ${undirected}`, 145, 59);
+            doc.text(`• Total visual aristas: ${edges.length}`, 145, 66);
+            
+            doc.setFontSize(12); doc.setTextColor(44, 62, 80);
+            doc.text('Nodos:', 145, 79);
+            doc.setFontSize(10); doc.setTextColor(80, 80, 80);
+            let yPos = 86;
+            nodes.forEach(node => {
+                if (yPos > pageHeight - 20) return;
+                const connections = edges.filter(e => e.from === node || e.to === node).length;
+                const loops = edges.filter(e => e.from === node && e.to === node && e.type === 'self').length;
+                let text = `${node.label}: (${Math.round(node.x)}, ${Math.round(node.y)}) - ${connections} conexiones`;
+                if (loops > 0) text += ` (${loops} bucle${loops > 1 ? 's' : ''})`;
+                doc.text(text, 145, yPos);
+                yPos += 6;
+            });
+            
+            // Página 2: Matriz
+            doc.addPage();
+            doc.setFontSize(16); doc.setTextColor(44, 62, 80);
+            doc.text('Matriz de Adyacencia', pageWidth/2, 15, { align: 'center' });
+            
+            const n = nodes.length;
+            const matrix = Array(n).fill(null).map(() => Array(n).fill(0));
+            const types  = Array(n).fill(null).map(() => Array(n).fill(null));
+            edges.forEach(edge => {
+                const fi = nodes.indexOf(edge.from), ti = nodes.indexOf(edge.to);
+                if (fi === -1 || ti === -1) return;
+                if (edge.type === 'self') { matrix[fi][ti]=1; types[fi][ti]='self'; }
+                else if (edge.type === 'undirected') { matrix[fi][ti]=1; matrix[ti][fi]=1; types[fi][ti]='undirected'; types[ti][fi]='undirected'; }
+                else { matrix[fi][ti]=1; types[fi][ti]=edge.type; }
+            });
+            for (let i=0; i<n; i++) for (let j=0; j<n; j++)
+                if (i!==j && matrix[i][j]===1 && matrix[j][i]===1 && types[i][j]!=='undirected') {
+                    types[i][j]='bidirectional'; types[j][i]='bidirectional';
+                }
+            
+            const cw = Math.min(15, (pageWidth-40)/(n+1)), ch=8, sx=20, sy=30;
+            doc.setFillColor(52,152,219); doc.setTextColor(255,255,255); doc.setFontSize(9);
+            doc.rect(sx, sy, cw, ch, 'F');
+            for (let j=0; j<n; j++) { const x=sx+cw*(j+1); doc.rect(x,sy,cw,ch,'F'); doc.text(nodes[j].label,x+cw/2,sy+ch/2+2,{align:'center'}); }
+            for (let i=0; i<n; i++) {
+                const ry = sy+ch*(i+1);
+                doc.setFillColor(52,152,219); doc.setTextColor(255,255,255);
+                doc.rect(sx,ry,cw,ch,'F'); doc.text(nodes[i].label,sx+cw/2,ry+ch/2+2,{align:'center'});
+                for (let j=0; j<n; j++) {
+                    const x=sx+cw*(j+1), v=matrix[i][j], t=types[i][j];
+                    if      (t==='self')          { doc.setFillColor(255,243,205); doc.setTextColor(133,100,4); }
+                    else if (t==='undirected')    { doc.setFillColor(204,229,255); doc.setTextColor(0,64,133); }
+                    else if (t==='bidirectional') { doc.setFillColor(248,215,218); doc.setTextColor(114,28,36); }
+                    else if (v===1)               { doc.setFillColor(213,244,230); doc.setTextColor(39,174,96); }
+                    else                          { doc.setFillColor(248,249,250); doc.setTextColor(100,100,100); }
+                    doc.rect(x,ry,cw,ch,'F'); doc.setDrawColor(200,200,200); doc.rect(x,ry,cw,ch);
+                    doc.text(v.toString(),x+cw/2,ry+ch/2+2,{align:'center'});
+                }
+            }
+            doc.setFontSize(10); doc.setTextColor(80,80,80);
+            doc.text('Verde=Dirigida | Azul=Sin dirección | Amarillo=Bucle | Rojo=Doble dirección', sx, sy+ch*(n+1)+10);
+            doc.save('analisis-algoritmos-grafo.pdf');
+        }
+
+        function saveToStorage() {
+            const data = {
+                nodes: nodes,
+                edges: edges.map(e => ({
+                    from: e.from.id,
+                    to: e.to.id,
+                    type: e.type,
+                    id: e.id
+                })),
+                counter: nodeIdCounter
+            };
+            localStorage.setItem('graphData', JSON.stringify(data));
+        }
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem('graphData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                nodeIdCounter = data.counter || 0;
+                nodes = data.nodes || [];
+                edges = [];
+                if (data.edges) {
+                    data.edges.forEach(edgeData => {
+                        const fromNode = nodes.find(n => n.id === edgeData.from);
+                        const toNode   = nodes.find(n => n.id === edgeData.to);
+                        if (fromNode && toNode) {
+                            edges.push({ 
+                                from: fromNode, 
+                                to: toNode, 
+                                type: edgeData.type || 'directed',
+                                id: edgeData.id || Date.now()
+                            });
+                        }
+                    });
+                }
+            }
+        }
+
+        document.getElementById('canvasContainer').addEventListener('wheel', function(e) {
+            e.stopPropagation();
+        });
+    </script>
+</body>
+</html>
